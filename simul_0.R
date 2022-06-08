@@ -7,11 +7,13 @@ library(usethis)
 
 # hackmd : A simple model of MM
 
-data_usdc_eth <- read_excel("ETH_USDC_0.3.xlsx",col_names = TRUE)
+data_usdc_eth <- read_excel("ETH_USDC_0.3_eth.xlsx",col_names = TRUE)
 # str(data_usdc_eth)
 
-pv <- data.frame(data_usdc_eth$sqrt_price_x96)
-colnames(pv) <- "p"
+data_p <- data.frame(data_usdc_eth$price,data_usdc_eth$qty)
+colnames(data_p) <- c("p", "q")
+data_p <- subset(data_p, q>0.005)
+pv <- data_p$p
 head(pv)
 
 
@@ -31,7 +33,7 @@ omega <- function(price) {
 stats_df = data.frame(Wt=numeric(), Wh=numeric())
 
 W0 <- 100000                      # MM's initial budget
-p0 <- pv[1,1]
+p0 <- pv[1]
 (xh <- x0 <- omega(p0)*W0/p0)     # initial value for x
 (yh <- y0 <- W0 - p0*x0)          # for y
 fill <- c()                       # every time a price movement trigers a buy or sell
@@ -39,7 +41,7 @@ floop <- TRUE
 
 for (i in 2:length(pv))
 {
-  while ((pd<-(pv[i,1]<((1/fac)*p0))) | (pi<-(pv[i,1]>fac*p0)))  # check points for price decrease/increas
+  while ((pd<-(pv[i]<((1/fac)*p0))) | (pi<-(pv[i]>fac*p0)))  # check points for price decrease/increas
   {
     p0 <- (pd*(1/fac)+pi*fac)*p0
     W0 <- p0*x0+y0
@@ -50,7 +52,7 @@ for (i in 2:length(pv))
       floop <- FALSE
     }
   }
-  stats_df <- rbind(stats_df, data.frame(Wt=pv[i,1]*x0+y0, Wh=pv[i,1]*xh+yh))
+  stats_df <- rbind(stats_df, data.frame(Wt=pv[i]*x0+y0, Wh=pv[i]*xh+yh))
   floop <- TRUE
 }
 
@@ -65,3 +67,4 @@ for (j in 1:length(fill)) {
 ratio <- stats_df$Wt/stats_df$Wh
 plot(ratio, type = "l", col="black", lwd = 1)
 abline(h=1, lty=2)
+
